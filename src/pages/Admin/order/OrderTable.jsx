@@ -650,10 +650,11 @@ const getRowBackgroundColor = (order) => {
       <div className="flex-1 flex flex-col min-h-0">
         {/* Scrollable Table Area */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="overflow-y-auto">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-y-auto ">
+<div className="relative flex flex-col bg-white rounded-lg shadow-sm border border-gray-200 h-[32em]">
+
+           <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

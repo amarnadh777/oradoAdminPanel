@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Upload, X, Info, ArrowLeft, Sparkles, Camera, Star, RotateCcw, Maximize ,Loader} from "lucide-react";
+import {Clock, ChevronDown, Upload, X, Info, ArrowLeft, Sparkles, Camera, Star, RotateCcw, Maximize ,Loader} from "lucide-react";
 
 const AddProductPage = ({
   onClose,
@@ -10,85 +10,123 @@ const AddProductPage = ({
   isEditMode = false,
    loading = false,
 }) => {
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: "",
-    minQty: "",
-    maxQty: "",
-    costPrice: "",
-    preparationTime: "",
-    isRecurring: false,
-    images: [],
-    availability: "always",
-    availableFrom: "",
-    availableTo: "",
-    unit: "piece",
-    stock: 0,
-    reorderLevel: 0,
-    enableInventory: false,
-    foodType: "veg",
-    _id: null,
-    imagesToRemove:null
-  });
+const [formData, setFormData] = useState({
+  name: "",
+  description: "",
+  price: "",
+  minQty: "",
+  maxQty: "",
+  costPrice: "",
+  preparationTime: "",
+  isRecurring: false,
+  images: [],
+  availability: "always",
+  availableFrom: "",
+  availableTo: "",
+  availableAfterTime: "",
+  unit: "piece",
+  stock: 0,
+  reorderLevel: 0,
+  enableInventory: false,
+  foodType: "veg",
+  _id: null,
+  imagesToRemove: null
+});
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [existingImageUrls, setExistingImageUrls] = useState([]);
   const [imagesToRemove, setImagesToRemove] = useState([]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const productData = {
-        name: formData.name,
-        _id: formData._id,
-        description: formData.description,
-        price: formData.price,
-        minQty: formData.minQty,
-        maxQty: formData.maxQty,
-        costPrice: formData.costPrice,
-        preparationTime: formData.preparationTime,
-        isRecurring: formData.isRecurring,
-        images: formData.images,
-        availability: formData.availability,
-        availableFrom: formData.availability === "time-based" ? formData.availableFrom : null,
-        availableTo: formData.availability === "time-based" ? formData.availableTo : null,
-        unit: formData.unit,
-        stock: formData.stock,
-        reorderLevel: formData.reorderLevel,
-        enableInventory: formData.enableInventory,
-        foodType: formData.foodType,
-        minimumOrderQuantity: formData.minQty,
-        maximumOrderQuantity: formData.maxQty,
-        imagesToRemove: imagesToRemove
-      };
-      await onAddProduct(productData);
-      onClose();
-    } catch (error) {
-      console.error("Error submitting form:", error);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const productData = {
+      name: formData.name || "",
+      _id: formData._id,
+      description: formData.description || "",
+      price: formData.price || "",
+      minQty: formData.minQty || "",
+      maxQty: formData.maxQty || "",
+      costPrice: formData.costPrice || "",
+      preparationTime: formData.preparationTime || "",
+      isRecurring: formData.isRecurring || false,
+      images: formData.images || [],
+      availability: formData.availability || "always",
+      // Handle different availability types - ensure no null values
+      availableAfterTime: formData.availability === "time-based" ? (formData.availableAfterTime || "") : null,
+      availableFromTime: formData.availability === "time-range" ? (formData.availableFrom || "") : null,
+      availableToTime: formData.availability === "time-range" ? (formData.availableTo || "") : null,
+      unit: formData.unit || "piece",
+      stock: formData.stock || 0,
+      reorderLevel: formData.reorderLevel || 0,
+      enableInventory: formData.enableInventory || false,
+      foodType: formData.foodType || "veg",
+      minimumOrderQuantity: formData.minQty || "",
+      maximumOrderQuantity: formData.maxQty || "",
+      imagesToRemove: imagesToRemove || []
+    };
+    await onAddProduct(productData);
+    onClose();
+  } catch (error) {
+    console.error("Error submitting form:", error);
+  }
+};
  
-  useEffect(() => {
-    if (isEditMode && initialData) {
-      const images = initialData.images || [];
-      const imageUrls = [];
-      const imageFiles = [];
+ useEffect(() => {
+  if (isEditMode && initialData) {
+    const images = initialData.images || [];
+    const imageUrls = [];
+    const imageFiles = [];
+    
+    setFormData({
+      // Set defaults for all fields first
+      name: "",
+      description: "",
+      price: "",
+      minQty: "",
+      maxQty: "",
+      costPrice: "",
+      preparationTime: "",
+      isRecurring: false,
+      images: [],
+      availability: "always",
+      availableFrom: "",
+      availableTo: "",
+      availableAfterTime: "",
+      unit: "piece",
+      stock: 0,
+      reorderLevel: 0,
+      enableInventory: false,
+      foodType: "veg",
+      _id: null,
+      imagesToRemove: null,
       
-      setFormData({
-        ...initialData,
-        _id: initialData._id,
-        minQty: initialData.minOrderQty,
-        maxQty: initialData.maxOrderQty,
-        availability: initialData.availability || "always",
-        availableFrom: initialData.availableFrom || "",
-        availableTo: initialData.availableTo || "",
-      });
-      
-      setExistingImageUrls(imageUrls);
-    }
-  }, [isEditMode, initialData]);
+      // Then override with initialData, ensuring no null values for string fields
+      ...initialData,
+      _id: initialData._id,
+      minQty: initialData.minOrderQty || "",
+      maxQty: initialData.maxOrderQty || "",
+      availability: initialData.availability || "always",
+      availableFrom: initialData.availableFromTime || "",
+      availableTo: initialData.availableToTime || "",
+      availableAfterTime: initialData.availableAfterTime || "",
+      name: initialData.name || "",
+      description: initialData.description || "",
+      price: initialData.price || "",
+      costPrice: initialData.costPrice || "",
+      preparationTime: initialData.preparationTime || "",
+      unit: initialData.unit || "piece",
+      stock: initialData.stock || 0,
+      reorderLevel: initialData.reorderLevel || 0,
+      enableInventory: initialData.enableInventory || false,
+      foodType: initialData.foodType || "veg",
+      isRecurring: initialData.isRecurring || false,
+    });
+    
+    setExistingImageUrls(imageUrls);
+  }
+}, [isEditMode, initialData]);
 
   const getImageSrc = (image) => {
     if (typeof image === 'string') {
@@ -184,8 +222,10 @@ const AddProductPage = ({
     setFormData((prev) => ({
       ...prev,
       availability: value,
-      availableFrom: value === "time-based" ? prev.availableFrom || "" : "",
-      availableTo: value === "time-based" ? prev.availableTo || "" : "",
+      // Reset time fields when switching availability types
+      availableFrom: value === "time-range" ? prev.availableFrom || "" : "",
+      availableTo: value === "time-range" ? prev.availableTo || "" : "",
+      availableAfterTime: value === "time-based" ? prev.availableAfterTime || "" : "",
     }));
   };
 
@@ -222,8 +262,6 @@ const AddProductPage = ({
   };
 
   const allImages = [...existingImageUrls, ...formData.images];
-  
-
 
   {console.log("Form Data Images:", formData);}
   return (
@@ -546,7 +584,7 @@ const AddProductPage = ({
                     </div>
                   </div>
 
-                  {/* Availability Card */}
+                  {/* Enhanced Availability Card */}
                   <div className="bg-emerald-50 rounded-xl p-6 space-y-6">
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-8 bg-emerald-500 rounded-full"></div>
@@ -558,7 +596,7 @@ const AddProductPage = ({
                       <label className="block text-sm font-semibold text-gray-700">
                         Availability <span className="text-red-500">*</span>
                       </label>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-4 gap-3">
                         <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:bg-white ${
                           formData.availability === "always" ? "border-emerald-500 bg-emerald-100" : "border-gray-200"
                         }`}>
@@ -590,7 +628,24 @@ const AddProductPage = ({
                           <div className="w-4 h-4 rounded-full border-2 border-blue-500 mr-3 flex items-center justify-center">
                             {formData.availability === "time-based" && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
                           </div>
-                          <span className="text-sm font-medium text-gray-700">Time Based</span>
+                          <span className="text-sm font-medium text-gray-700">After Time</span>
+                        </label>
+                        
+                        <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:bg-white ${
+                          formData.availability === "time-range" ? "border-purple-500 bg-purple-100" : "border-gray-200"
+                        }`}>
+                          <input
+                            type="radio"
+                            name="availability"
+                            value="time-range"
+                            checked={formData.availability === "time-range"}
+                            onChange={handleAvailabilityChange}
+                            className="sr-only"
+                          />
+                          <div className="w-4 h-4 rounded-full border-2 border-purple-500 mr-3 flex items-center justify-center">
+                            {formData.availability === "time-range" && <div className="w-2 h-2 rounded-full bg-purple-500"></div>}
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">Time Range</span>
                         </label>
                         
                         <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:bg-white ${
@@ -615,36 +670,140 @@ const AddProductPage = ({
                     {/* Time-based Availability Settings */}
                     {formData.availability === "time-based" && (
                       <div className="space-y-4 animate-in slide-in-from-top-2">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="block text-sm font-semibold text-gray-700">
-                              Available From <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="time"
-                              name="availableFrom"
-                              value={formData.availableFrom}
-                              onChange={handleChange}
-                              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="block text-sm font-semibold text-gray-700">
-                              Available To <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="time"
-                              name="availableTo"
-                              value={formData.availableTo}
-                              onChange={handleChange}
-                              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                              required
-                            />
-                          </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Available After Time <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="time"
+                            name="availableAfterTime"
+                            value={formData.availableAfterTime}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            required
+                          />
+                          <p className="text-xs text-gray-500">Product will be available after this time</p>
                         </div>
                       </div>
                     )}
+
+                    {/* Time Range Availability Settings */}
+                   {formData.availability === "time-range" && (
+  <div className="space-y-4 animate-in slide-in-from-top-2">
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <label className="block text-sm font-semibold text-gray-700">
+          Available From <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="time"
+          name="availableFrom"
+          value={formData.availableFrom}
+          onChange={handleChange}
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+          required
+        />
+        {!formData.availableFrom && (
+          <p className="text-xs text-red-500">Start time is required</p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <label className="block text-sm font-semibold text-gray-700">
+          Available To <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="time"
+          name="availableTo"
+          value={formData.availableTo}
+          onChange={handleChange}
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+          required
+        />
+        {!formData.availableTo && (
+          <p className="text-xs text-red-500">End time is required</p>
+        )}
+      </div>
+    </div>
+    
+    {/* Validation Messages */}
+    {formData.availableFrom && formData.availableTo && formData.availableFrom >= formData.availableTo && (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start space-x-2">
+        <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        </svg>
+        <div>
+          <p className="text-sm font-medium text-red-800">Invalid Time Range</p>
+          <p className="text-sm text-red-700 mt-1">
+            End time must be after start time. Please adjust your time range.
+          </p>
+        </div>
+      </div>
+    )}
+    
+    {/* Success Message when valid */}
+    {formData.availableFrom && formData.availableTo && formData.availableFrom < formData.availableTo && (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start space-x-2">
+        <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+        <div>
+          <p className="text-sm font-medium text-green-800">Valid Time Range</p>
+          <p className="text-sm text-green-700 mt-1">
+            Product will be available from {formData.availableFrom} to {formData.availableTo}
+          </p>
+        </div>
+      </div>
+    )}
+    
+    {/* Time Range Display */}
+    {formData.availableFrom && formData.availableTo && (
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <Clock className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Time Range Set</p>
+              <p className="text-xs text-gray-600">
+                {formData.availableFrom} - {formData.availableTo}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-medium text-blue-600">
+              {(() => {
+                const [fromHour, fromMinute] = formData.availableFrom.split(':').map(Number);
+                const [toHour, toMinute] = formData.availableTo.split(':').map(Number);
+                const totalMinutes = (toHour * 60 + toMinute) - (fromHour * 60 + fromMinute);
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                return `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim();
+              })()}
+            </p>
+            <p className="text-xs text-gray-500">Duration</p>
+          </div>
+        </div>
+      </div>
+    )}
+    
+    {/* Help Text */}
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+      <div className="flex items-start space-x-2">
+        <Info className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-gray-800 mb-1">About Time Range Availability</p>
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li>• Product will only be visible and orderable during the specified hours</li>
+            <li>• Outside this range, the product will appear as unavailable</li>
+            <li>• Set 24-hour format times (e.g., 09:00, 17:30, 22:00)</li>
+            <li>• Ensure end time is later than start time for the range to be valid</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
                     {/* Out of Stock Message */}
                     {formData.availability === "out-of-stock" && (
@@ -879,4 +1038,4 @@ const AddProductPage = ({
   );
 };
 
-export default AddProductPage; 
+export default AddProductPage;

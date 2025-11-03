@@ -24,6 +24,7 @@ const CategoryItems = () => {
                     `/admin/restaurant/${restaurantId}/category/${categoryId}`,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
+                
                 setItems(response.data.data || []);
                 setLoading(false);
             } catch (err) {

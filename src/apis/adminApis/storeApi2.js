@@ -105,6 +105,11 @@ export const getStoreById = async (id) => {
   }
 }
 
+
+
+
+
+
 export const createProduct = async (productData, storeId, categoryId) => {
   try {
     const formData = new FormData();
@@ -120,10 +125,17 @@ export const createProduct = async (productData, storeId, categoryId) => {
     formData.append('storeId', storeId);
     formData.append('categoryId', categoryId);
     formData.append('preparationTime', productData.preparationTime || 10);
-    formData.append('availability', productData.availability?.type || 'always');
+    formData.append('availability', productData.availability || 'always');
     
-    if (productData.availability?.type === 'time-based' || productData.availability?.type === 'scheduled') {
-      formData.append('availableAfterTime', productData.availableFromTime || '17:00');
+    // Append time fields based on availability type
+    if (productData.availableAfterTime) {
+      formData.append('availableAfterTime', productData.availableAfterTime);
+    }
+    if (productData.availableFromTime) {
+      formData.append('availableFromTime', productData.availableFromTime);
+    }
+    if (productData.availableToTime) {
+      formData.append('availableToTime', productData.availableToTime);
     }
     
     formData.append('unit', productData.unit || 'piece');
@@ -132,34 +144,31 @@ export const createProduct = async (productData, storeId, categoryId) => {
     formData.append('enableInventory', productData.enableInventory || false);
     formData.append('foodType', productData.foodType || 'veg');
     formData.append('costPrice', productData.costPrice || 0);
-    formData.append('minimumOrderQuantity', productData.minQty || 1);
-    formData.append('maximumOrderQuantity', productData.maxQty || 100);
+    formData.append('minimumOrderQuantity', productData.minOrderQty || productData.minQty || 1);
+    formData.append('maximumOrderQuantity', productData.maxOrderQty || productData.maxQty || 100);
+    formData.append('active', productData.active !== undefined ? productData.active : true);
 
     // Handle image uploads
     if (productData.images && productData.images.length > 0) {
       productData.images.forEach((image, index) => {
         if (image instanceof File) {
-          // Append each image with a unique name
           formData.append(`images`, image);
-          // Alternatively, if your backend expects specific names:
-          // formData.append(`images[${index}]`, image);
         } else if (typeof image === 'string') {
-          // If editing and image is a URL string, you might need to handle differently
-          console.warn('Skipping existing image URL - only new uploads are supported');
+          console.warn('Skipping existing image URL - only new uploads are supported for creation');
         }
       });
     } else {
       console.log('No images to upload');
     }
 
-    // Log FormData contents for debugging (note: can't directly console.log FormData)
+    // Log FormData contents for debugging
     for (let [key, value] of formData.entries()) {
       console.log(key, value instanceof File ? value.name : value);
     }
 
     const response = await apiClient.post('/store/product', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data' // This is crucial for file uploads
+        'Content-Type': 'multipart/form-data'
       }
     });
 
@@ -172,68 +181,81 @@ export const createProduct = async (productData, storeId, categoryId) => {
 
 
 
-
-
-
-
-
-
-
-
-export const updateProductById = async (id, productData, imagesToRemove = [], newImages = []) => {
-  console.log("Updating product with data:", productData);
-  
+export const updateProductById = async (productId, productData, imagesToRemove = [], newImages = []) => {
   const formData = new FormData();
 
-  // Append product fields
-  formData.append('name', productData.name);
-  formData.append('description', productData.description || '');
-  formData.append('price', productData.price);
-  formData.append('unit', productData.unit || 'piece');
-  formData.append('costPrice', productData.costPrice || 0);
-  formData.append('minimumOrderQuantity', productData.minimumOrderQuantity || 1);
-  formData.append('maximumOrderQuantity', productData.maximumOrderQuantity || 100);
-  formData.append('preparationTime', productData.preparationTime || 0);
-  formData.append('reorderLevel', productData.reorderLevel || 0);
-  formData.append('stock', productData.stock || 0);
-  formData.append('enableInventory', productData.enableInventory);
-  formData.append('foodType', productData.foodType || 'veg');
-  formData.append('availability', productData.availability || 'always');
-  formData.append('isRecurring', productData.isRecurring || false);
-
-  // ✅ Append time-based availability fields (corrected)
-  if (productData.availability === 'time-based') {
-    formData.append('availableFrom', productData.availableFrom || '');
-    formData.append('availableTo', productData.availableTo || '');
-  } else {
-    // Clear time-based fields if not time-based
-    formData.append('availableFrom', '');
-    formData.append('availableTo', '');
+  // Add basic product fields
+  if (productData.name) formData.append('name', productData.name);
+  if (productData.description) formData.append('description', productData.description);
+  if (productData.price) formData.append('price', productData.price);
+  if (productData.foodType) formData.append('foodType', productData.foodType);
+  if (productData.unit) formData.append('unit', productData.unit);
+  if (productData.preparationTime) formData.append('preparationTime', productData.preparationTime);
+  if (productData.minimumOrderQuantity) formData.append('minimumOrderQuantity', productData.minimumOrderQuantity);
+  if (productData.maximumOrderQuantity) formData.append('maximumOrderQuantity', productData.maximumOrderQuantity);
+  if (productData.availability) formData.append('availability', productData.availability);
+  
+  // Add time fields
+  if (productData.availableAfterTime) formData.append('availableAfterTime', productData.availableAfterTime);
+  if (productData.availableFromTime) formData.append('availableFromTime', productData.availableFromTime);
+  if (productData.availableToTime) formData.append('availableToTime', productData.availableToTime);
+  
+  // Add boolean fields
+  formData.append('active', productData.active);
+  formData.append('enableInventory', productData.enableInventory || false);
+  
+  // Add inventory fields if enabled
+  if (productData.enableInventory) {
+    if (productData.stock) formData.append('stock', productData.stock);
+    if (productData.reorderLevel) formData.append('reorderLevel', productData.reorderLevel);
   }
+  
+  // Add cost fields
+  if (productData.costPrice) formData.append('costPrice', productData.costPrice);
 
-  // ✅ Append imagesToRemove as a JSON string
-  if (imagesToRemove && imagesToRemove.length > 0) {
+  // Add imagesToRemove (as JSON string)
+  if (imagesToRemove.length > 0) {
     formData.append('imagesToRemove', JSON.stringify(imagesToRemove));
   }
 
-  // ✅ Append new images — must use 'images' to match Multer config
-  newImages.forEach(file => formData.append('images', file));
+  // Append new images (files)
+  newImages.forEach((imageFile) => {
+    formData.append('images', imageFile);
+  });
 
-  // Debug: Log form data contents
-  console.log("FormData contents:");
-  for (let [key, value] of formData.entries()) {
-    console.log(key, value);
-  }
+  console.log("Updating product with data:", {
+    productId,
+    productData,
+    imagesToRemoveCount: imagesToRemove.length,
+    newImagesCount: newImages.length
+  });
 
-  // ✅ Make PATCH request
-  const response = await apiClient.patch(`/store/product/${id}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  // Send PATCH request
+  const response = await apiClient.patch(`/store/product/${productId}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
   });
 
   return response.data;
 };
 
+export const toggleCategoryStatus = async (categoryId) => {
+  try {
+    console.log("Toggling category status for:", categoryId);
 
+    const response = await apiClient.put(`/store/category/${categoryId}/toggle-status`);
+
+    console.log("Toggle category response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Toggle category status failed:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+}
 
 
 export const updateCategoryById = async (id, categoryData, imagesToRemove = [], newImages = []) => {
@@ -371,16 +393,23 @@ export const toggleCategoryActiveStatus = async (id, categoryData, imagesToRemov
 };  
 
 
-
 export const updateCategory = async (id, categoryData, imagesToRemove = [], newImages = []) => {
   const formData = new FormData();
 
-  // Add basic fields
+  // Add ALL basic fields - not just name and description
   if (categoryData.name) formData.append('name', categoryData.name);
   if (categoryData.description) formData.append('description', categoryData.description);
+  if (categoryData.availability) formData.append('availability', categoryData.availability);
   if (categoryData.restaurantId) formData.append('restaurantId', categoryData.restaurantId);
+  
+  // Add time fields based on availability
+  if (categoryData.availableAfterTime) formData.append('availableAfterTime', categoryData.availableAfterTime);
+  if (categoryData.availableFromTime) formData.append('availableFromTime', categoryData.availableFromTime);
+  if (categoryData.availableToTime) formData.append('availableToTime', categoryData.availableToTime);
+  
+  // Add boolean fields
   formData.append('active', categoryData.active);
-  formData.append('autoOnOff', categoryData.autoOnOff);
+  formData.append('autoOnOff', categoryData.autoOnOff || false);
 
   // Add imagesToRemove (as JSON string)
   if (imagesToRemove.length > 0) {
@@ -389,10 +418,21 @@ export const updateCategory = async (id, categoryData, imagesToRemove = [], newI
 
   // Append new images (files)
   newImages.forEach((imageFile) => {
-    formData.append('images', imageFile); // must match `upload.array('images')` field
+    formData.append('images', imageFile);
   });
-  
 
+  console.log("Sending FormData with fields:", {
+    name: categoryData.name,
+    description: categoryData.description,
+    availability: categoryData.availability,
+    active: categoryData.active,
+    autoOnOff: categoryData.autoOnOff,
+    availableAfterTime: categoryData.availableAfterTime,
+    availableFromTime: categoryData.availableFromTime,
+    availableToTime: categoryData.availableToTime,
+    imagesToRemoveCount: imagesToRemove.length,
+    newImagesCount: newImages.length
+  });
 
   // Send PATCH request
   const response = await apiClient.patch(`/store/category/${id}`, formData, {
@@ -402,8 +442,7 @@ export const updateCategory = async (id, categoryData, imagesToRemove = [], newI
   });
 
   return response.data;
-};  
-
+};
 
 
 
@@ -633,5 +672,32 @@ export const bulkEditProducts = async (restaurantId,formData) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
+  }
+};
+
+
+
+
+// ✅ Archive Product
+export const archiveProduct = async (productId) => {
+  try {
+    const res = await apiClient.put(`/store/product/${productId}/archive`);
+    console.log("Archive product response:", res.data);
+    return res.data;
+  } catch (error) {
+    console.error("Error archiving product:", error);
+    throw error;
+  }
+};
+
+// ✅ Unarchive Product
+export const unarchiveProduct = async (productId) => {
+  try {
+    const res = await apiClient.put(`/store/product/${productId}/unarchive`);
+    console.log("Unarchive product response:", res.data);
+    return res.data;
+  } catch (error) {
+    console.error("Error unarchiving product:", error);
+    throw error;
   }
 };

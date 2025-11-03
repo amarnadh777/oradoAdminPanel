@@ -13,6 +13,8 @@ const CreateCategoryModal = ({
   const [description, setDescription] = useState('');
   const [availability, setAvailability] = useState('always');
   const [availableAfterTime, setAvailableAfterTime] = useState('');
+  const [availableFromTime, setAvailableFromTime] = useState('');
+  const [availableToTime, setAvailableToTime] = useState('');
   const [active, setActive] = useState(true);
   const [imageFiles, setImageFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -27,6 +29,8 @@ const CreateCategoryModal = ({
       setDescription(initialData.description || '');
       setAvailability(initialData.availability || 'always');
       setAvailableAfterTime(initialData.availableAfterTime || '');
+      setAvailableFromTime(initialData.availableFromTime || '');
+      setAvailableToTime(initialData.availableToTime || '');
       setActive(initialData.active !== undefined ? initialData.active : true);
       
       // Handle existing images
@@ -45,6 +49,24 @@ const CreateCategoryModal = ({
       return;
     }
 
+    // Validate time range
+    if (availability === 'time-range') {
+      if (!availableFromTime || !availableToTime) {
+        setError('Both start time and end time are required for time range availability');
+        return;
+      }
+      if (availableFromTime >= availableToTime) {
+        setError('End time must be after start time');
+        return;
+      }
+    }
+
+    // Validate time-based
+    if (availability === 'time-based' && !availableAfterTime) {
+      setError('Available after time is required for time-based availability');
+      return;
+    }
+
     try {
       const categoryData = {
         // Always include these fields
@@ -52,6 +74,8 @@ const CreateCategoryModal = ({
         description: description.trim(),
         availability,
         availableAfterTime: availability === 'time-based' ? availableAfterTime : null,
+        availableFromTime: availability === 'time-range' ? availableFromTime : null,
+        availableToTime: availability === 'time-range' ? availableToTime : null,
         active,
         restaurantId,
         imageFiles,
@@ -179,37 +203,102 @@ const CreateCategoryModal = ({
             />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Availability
-            </label>
-            <select
-              value={availability}
-              onChange={(e) => setAvailability(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading}
-            >
-              <option value="always">Always Available</option>
-              <option value="time-based">Time Based</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </div>
-          
-          {availability === 'time-based' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                <Clock size={14} className="mr-1" />
-                Available After
-              </label>
-              <input
-                type="time"
-                value={availableAfterTime}
-                onChange={(e) => setAvailableAfterTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={loading}
-              />
+          {/* Availability Section */}
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+              <Clock className="w-4 h-4 mr-2 text-blue-600" />
+              Availability Settings
+            </h3>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Availability Type
+                </label>
+                <select
+                  value={availability}
+                  onChange={(e) => setAvailability(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  disabled={loading}
+                >
+                  <option value="always">Always Available</option>
+                  <option value="time-based">Available After Time</option>
+                  <option value="time-range">Time Range</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              
+              {/* Time-based Availability */}
+              {availability === 'time-based' && (
+                <div className="animate-in slide-in-from-top-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Available After
+                  </label>
+                  <input
+                    type="time"
+                    value={availableAfterTime}
+                    onChange={(e) => setAvailableAfterTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Category will be available after this time
+                  </p>
+                </div>
+              )}
+              
+              {/* Time Range Availability */}
+              {availability === 'time-range' && (
+                <div className="space-y-3 animate-in slide-in-from-top-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Available Time Range
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">From</label>
+                      <input
+                        type="time"
+                        value={availableFromTime}
+                        onChange={(e) => setAvailableFromTime(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">To</label>
+                      <input
+                        type="time"
+                        value={availableToTime}
+                        onChange={(e) => setAvailableToTime(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                  {availableFromTime && availableToTime && availableFromTime >= availableToTime && (
+                    <p className="text-xs text-red-500">
+                      ⚠️ End time must be after start time
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Category will only be available during this time range
+                  </p>
+                </div>
+              )}
+              
+              {/* Disabled Availability */}
+              {availability === 'disabled' && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 animate-in slide-in-from-top-2">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 text-yellow-600" />
+                    <p className="text-sm text-yellow-700">
+                      This category will be hidden from customers
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
           
           <div className="flex items-center justify-between pt-2">
             <div>

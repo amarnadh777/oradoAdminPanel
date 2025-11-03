@@ -339,12 +339,20 @@ export const toggleCategoryActiveStatus = async (id, categoryData, imagesToRemov
 export const updateCategory = async (id, categoryData, imagesToRemove = [], newImages = []) => {
   const formData = new FormData();
 
-  // Add basic fields
+  // Add ALL basic fields - not just name and description
   if (categoryData.name) formData.append('name', categoryData.name);
   if (categoryData.description) formData.append('description', categoryData.description);
+  if (categoryData.availability) formData.append('availability', categoryData.availability);
   if (categoryData.restaurantId) formData.append('restaurantId', categoryData.restaurantId);
+  
+  // Add time fields based on availability
+  if (categoryData.availableAfterTime) formData.append('availableAfterTime', categoryData.availableAfterTime);
+  if (categoryData.availableFromTime) formData.append('availableFromTime', categoryData.availableFromTime);
+  if (categoryData.availableToTime) formData.append('availableToTime', categoryData.availableToTime);
+  
+  // Add boolean fields
   formData.append('active', categoryData.active);
-  formData.append('autoOnOff', categoryData.autoOnOff);
+  formData.append('autoOnOff', categoryData.autoOnOff || false);
 
   // Add imagesToRemove (as JSON string)
   if (imagesToRemove.length > 0) {
@@ -353,7 +361,20 @@ export const updateCategory = async (id, categoryData, imagesToRemove = [], newI
 
   // Append new images (files)
   newImages.forEach((imageFile) => {
-    formData.append('images', imageFile); // must match `upload.array('images')` field
+    formData.append('images', imageFile);
+  });
+
+  console.log("Sending FormData with fields:", {
+    name: categoryData.name,
+    description: categoryData.description,
+    availability: categoryData.availability,
+    active: categoryData.active,
+    autoOnOff: categoryData.autoOnOff,
+    availableAfterTime: categoryData.availableAfterTime,
+    availableFromTime: categoryData.availableFromTime,
+    availableToTime: categoryData.availableToTime,
+    imagesToRemoveCount: imagesToRemove.length,
+    newImagesCount: newImages.length
   });
 
   // Send PATCH request
@@ -364,7 +385,7 @@ export const updateCategory = async (id, categoryData, imagesToRemove = [], newI
   });
 
   return response.data;
-};  
+};
 
 
 

@@ -54,19 +54,23 @@
     bulkEditCategoriesExcel,
     exportProducts,
     bulkEditProducts,
+    toggleCategoryStatus,
+      archiveProduct, // Add this
+  unarchiveProduct // Add this
   } from "../../../apis/adminApis/storeApi2";
 
   import { Link } from "react-router-dom";
   
   import CreateCategoryModal from "../../../components/catelog/CreateCategoryModal";
-  import toast from "react-hot-toast";
+  // import toast from "react-hot-toast";
+  import { toast } from "react-toastify";
   import AddProductPage from "../../../components/catelog/AddProductPage";
   import DeleteConfirmationModal from "../../../components/catelog/DeleteConfirmationModal";
   import ImportCategoriesModal from "../../../components/catelog/ImportCategoriesModal";
   import BulkEditCategoriesModal from "../../../components/catelog/BulkEditCategoriesModal";
   import ImportProductsModal from "../../../components/catelog/ImportProductsModal";
   import BulkEditProductsModal from "../../../components/catelog/BulkEditProductsModal";
-import { archiveCategory, unarchiveCategory } from "../../../apis/adminApis/storeApi";
+  import { archiveCategory, unarchiveCategory } from "../../../apis/adminApis/storeApi";
 
   function CatelogManagement() {
     const id = useParams().id;
@@ -128,48 +132,111 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
     const fileInputRef = useRef(null);
 
     // Format product data from backend to frontend structure
-    const formatProduct = (product) => ({
-      id: product._id,
-      _id: product._id,
-      categoryId: product.categoryId,
-      name: product.name,
-      price: product.price,
-      foodType: product.foodType,
-      unit: product.unit,
-      status: product.active ? "Active" : "Inactive",
-      active: product.active,
-      preparationTime: product.preparationTime,
-      minOrderQty: product.minimumOrderQuantity,
-      maxOrderQty: product.maximumOrderQuantity,
-      availabilityTime: product.availableAfterTime || "--:--",
-      availableAfterTime: product.availableAfterTime,
-      description: product.description,
-      images: product.images || [],
-      stock: product.enableInventory ? product.stock : undefined,
-      enableInventory: product.enableInventory,
-      reorderLevel: product.reorderLevel,
-      isLowStock: product.enableInventory && product.stock < product.reorderLevel,
-      costPrice: product.costPrice,
-      revenueShare: product.revenueShare,
-      specialOffer: product.specialOffer,
-      restaurantId: product.restaurantId,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
-    });
+  // Format product data from backend to frontend structure
+const formatProduct = (product) => ({
+  id: product._id,
+  _id: product._id,
+  categoryId: product.categoryId,
+  name: product.name,
+  price: product.price,
+  foodType: product.foodType,
+  unit: product.unit,
+  status: product.active ? "Active" : "Inactive",
+  active: product.active,
+  archived: product.archived || false, // Add this line
+  archivedAt: product.archivedAt || null, // Add this line if you want to use it
+  preparationTime: product.preparationTime,
+  minOrderQty: product.minimumOrderQuantity,
+  maxOrderQty: product.maximumOrderQuantity,
+  availability: product.availability || "always",
+  availableAfterTime: product.availableAfterTime || "",
+  availableFromTime: product.availableFromTime || "",
+  availableToTime: product.availableToTime || "",
+  description: product.description,
+  images: product.images || [],
+  stock: product.enableInventory ? product.stock : undefined,
+  enableInventory: product.enableInventory,
+  reorderLevel: product.reorderLevel,
+  isLowStock: product.enableInventory && product.stock < product.reorderLevel,
+  costPrice: product.costPrice,
+  revenueShare: product.revenueShare,
+  specialOffer: product.specialOffer,
+  restaurantId: product.restaurantId,
+  createdAt: product.createdAt,
+  updatedAt: product.updatedAt,
+});
 
     // Format category data from backend to frontend structure
-    const formatCategory = (category) => ({
-      _id: category._id,
-      name: category.name,
-      productCount: category.productCount || 0,
-      isActive: category.active,
-      active: category.active,
-      images: category.images,
-      description: category.description,
-      createdAt: category.createdAt,
-      updatedAt: category.updatedAt,
-    });
+  const formatCategory = (category) => ({
+  _id: category._id,
+  name: category.name,
+  productCount: category.productCount || 0,
+  isActive: category.active,
+  active: category.active,
+  archived: category.archived,
+  images: category.images,
+  description: category.description,
+  availability: category.availability || 'always',
+  availableAfterTime: category.availableAfterTime || '',
+  availableFromTime: category.availableFromTime || '',
+  availableToTime: category.availableToTime || '',
+  createdAt: category.createdAt,
+  updatedAt: category.updatedAt,
+});
 
+
+
+
+    const fetchCategories = async () => {
+  try {
+    setLoading((prev) => ({ ...prev, categories: true }));
+    const categoriesData = await fetchRestaurantCategories(id);
+    const formattedCategories = categoriesData.map(formatCategory);
+
+    console.log(formattedCategories)
+    setCategories(formattedCategories);
+  } catch (err) {
+    console.error(err);
+    setError((prev) => ({ ...prev, categories: err.message }));
+    toast.error("Failed to load categories");
+  } finally {
+    setLoading((prev) => ({ ...prev, categories: false }));
+  }
+};
+
+const handleDisableCategory = async (categoryId) => {
+  try {
+    const category = categories.find(cat => cat._id === categoryId);
+    const categoryName = category?.name || 'Category';
+    
+    await toggleCategoryStatus(categoryId);
+    await fetchCategories();
+    
+    toast.success(`🚫 "${categoryName}" has been disabled!`, {
+      duration: 4000,
+    });
+  } catch (error) {
+    console.error('Failed to disable category:', error);
+    toast.error('❌ Failed to disable category');
+  }
+};
+
+const handleEnableCategory = async (categoryId) => {
+  try {
+    const category = categories.find(cat => cat._id === categoryId);
+    const categoryName = category?.name || 'Category';
+    
+    await toggleCategoryStatus(categoryId);
+    await fetchCategories();
+    
+    toast.success(`✅ "${categoryName}" has been enabled!`, {
+      duration: 4000,
+    });
+  } catch (error) {
+    console.error('Failed to enable category:', error);
+    toast.error('❌ Failed to enable category');
+  }
+};
     const handleCategoryCreate = async (newCategory) => {
       try {
         setLoading((prev) => ({ ...prev, actions: true })); // ✅ Start loading
@@ -187,6 +254,59 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
         setLoading((prev) => ({ ...prev, actions: false })); // ✅ End loading
       }
     };
+
+
+
+
+
+const handleUnarchiveProduct = async (productId) => {
+  try {
+    const product = products.find(p => p._id === productId);
+    const productName = product?.name || 'Product';
+    
+    await unarchiveProduct(productId);
+    
+    // Refresh products to get updated archived status
+    if (selectedCategory) {
+      const productsData = await fetchCategoryProducts(id, selectedCategory);
+      const formattedProducts = productsData.map(formatProduct);
+      setProducts(formattedProducts);
+    }
+    
+    toast.success(`🔄 "${productName}" has been unarchived!`);
+  } catch (error) {
+    console.error('Failed to unarchive product:', error);
+    toast.error('❌ Failed to unarchive product');
+  }
+};
+
+const handleArchiveProduct = async (productId) => {
+  try {
+    const product = products.find(p => p._id === productId);
+    const productName = product?.name || 'Product';
+    
+    await archiveProduct(productId);
+    
+    // Refresh products to get updated archived status
+    if (selectedCategory) {
+      const productsData = await fetchCategoryProducts(id, selectedCategory);
+      const formattedProducts = productsData.map(formatProduct);
+      setProducts(formattedProducts);
+    }
+    
+    toast.success(`📁 "${productName}" has been archived!`);
+  } catch (error) {
+    console.error('Failed to archive product:', error);
+    toast.error('❌ Failed to archive product');
+  }
+};
+
+
+
+
+
+
+
     useEffect(() => {
       const fetchInitialData = async () => {
         try {
@@ -199,6 +319,8 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
 
           const categoriesData = await fetchRestaurantCategories(id);
           const formattedCategories = categoriesData.map(formatCategory);
+
+          console.log(categoriesData)
           setCategories(formattedCategories);
 
           if (formattedCategories.length > 0) {
@@ -285,59 +407,131 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
     };
   }, []);
 
-    const handleProductCreate = async (productData) => {
-      try {
-        setLoading((prev) => ({ ...prev, products: true }));
-        const response = await createProduct(productData, id, selectedCategory);
-        const formattedData = formatProduct(response.data);
-        setProducts((prevProducts) => [...prevProducts, formattedData]);
-        setSelectedProduct(response.data._id);
-        toast.success("Product created successfully");
-        setIsProductModalOpen(false);
-      } catch (err) {
-        console.error("Error creating product:", err);
-        setError((prev) => ({ ...prev, products: err.message }));
-        toast.error("Failed to create product");
-      } finally {
-        setLoading((prev) => ({ ...prev, products: false }));
-      }
+   const handleProductCreate = async (productData) => {
+  try {
+    setLoading((prev) => ({ ...prev, products: true }));
+    console.log("Product before create:", productData);
+
+    // 1. Split images into existing (URLs) and new (Files)
+    const newImages = productData.images.filter((img) => img instanceof File);
+    const existingImages = productData.images.filter(
+      (img) => typeof img === "string"
+    );
+
+    // 2. Prepare product data with proper time fields based on availability
+    const preparedProductData = {
+      ...productData,
+      images: existingImages, // keep only URLs in productData
+      
+      // Handle time fields based on availability type
+      ...(productData.availability === "time-based" && {
+        availableAfterTime: productData.availableAfterTime,
+        availableFromTime: null,
+        availableToTime: null
+      }),
+      ...(productData.availability === "time-range" && {
+        availableFromTime: productData.availableFromTime,
+        availableToTime: productData.availableToTime,
+        availableAfterTime: null
+      }),
+      ...(productData.availability === "always" && {
+        availableAfterTime: null,
+        availableFromTime: null,
+        availableToTime: null
+      }),
+      ...(productData.availability === "out-of-stock" && {
+        availableAfterTime: null,
+        availableFromTime: null,
+        availableToTime: null
+      })
     };
 
-    const handleEditProduct = async (product) => {
-      try {
-        setLoading((prev) => ({ ...prev, products: true }));
-        console.log("Product before update:", product);
+    console.log("Sending product data for creation:", preparedProductData);
 
-        // 1. Split images into existing (URLs) and new (Files)
-        const newImages = product.images.filter((img) => img instanceof File);
-        const existingImages = product.images.filter(
-          (img) => typeof img === "string"
-        );
+    // 3. Call API with correct params
+    const response = await createProduct(preparedProductData, id, selectedCategory);
+    
+    // 4. Format response
+    const formattedData = formatProduct(response.data);
 
-        // 2. Call API with correct params
-        const response = await updateProductById(
-          product._id,
-          { ...product, images: existingImages }, // keep only URLs in productData
-          product.imagesToRemove || [], // tell backend which to remove
-          newImages // upload these
-        );
+    // 5. Update UI state
+    setProducts((prevProducts) => [...prevProducts, formattedData]);
+    setSelectedProduct(response.data._id);
+    setLoading((prev) => ({ ...prev, products: false }));
+    toast.success("Product created successfully");
+    setIsProductModalOpen(false);
+  } catch (err) {
+    console.error("Error creating product:", err);
+    setError((prev) => ({ ...prev, products: err.message }));
+    setLoading((prev) => ({ ...prev, products: false }));
+    toast.error("Failed to create product");
+  }
+};
+ const handleEditProduct = async (product) => {
+  try {
+    setLoading((prev) => ({ ...prev, products: true }));
+    console.log("Product before update:", product);
 
-        // 3. Format response
-        const formattedData = formatProduct(response.data);
+    // 1. Split images into existing (URLs) and new (Files)
+    const newImages = product.images.filter((img) => img instanceof File);
+    const existingImages = product.images.filter(
+      (img) => typeof img === "string"
+    );
 
-        // 4. Update UI state
-        setProducts((prevProducts) =>
-          prevProducts.map((p) => (p._id === product._id ? formattedData : p))
-        );
-        setLoading((prev) => ({ ...prev, products: false }));
-        toast.success("Product updated successfully");
-        setIsEditProductModalOpen(false);
-      } catch (error) {
-        setLoading((prev) => ({ ...prev, products: false }));
-        console.error("Update failed:", error);
-        toast.error("Failed to update product");
-      }
+    // 2. Prepare product data with proper time fields based on availability
+    const productData = {
+      ...product,
+      images: existingImages, // keep only URLs in productData
+      
+      // Handle time fields based on availability type
+      ...(product.availability === "time-based" && {
+        availableAfterTime: product.availableAfterTime,
+        availableFromTime: null,
+        availableToTime: null
+      }),
+      ...(product.availability === "time-range" && {
+        availableFromTime: product.availableFromTime,
+        availableToTime: product.availableToTime,
+        availableAfterTime: null
+      }),
+      ...(product.availability === "always" && {
+        availableAfterTime: null,
+        availableFromTime: null,
+        availableToTime: null
+      }),
+      ...(product.availability === "out-of-stock" && {
+        availableAfterTime: null,
+        availableFromTime: null,
+        availableToTime: null
+      })
     };
+
+    console.log("Sending product data:", productData);
+
+    // 3. Call API with correct params
+    const response = await updateProductById(
+      product._id,
+      productData, // send prepared product data
+      product.imagesToRemove || [], // tell backend which to remove
+      newImages // upload these
+    );
+
+    // 4. Format response
+    const formattedData = formatProduct(response.data);
+
+    // 5. Update UI state
+    setProducts((prevProducts) =>
+      prevProducts.map((p) => (p._id === product._id ? formattedData : p))
+    );
+    setLoading((prev) => ({ ...prev, products: false }));
+    toast.success("Product updated successfully");
+    setIsEditProductModalOpen(false);
+  } catch (error) {
+    setLoading((prev) => ({ ...prev, products: false }));
+    console.error("Update failed:", error);
+    toast.error("Failed to update product");
+  }
+};
 
     const handleEdit = (categoryId, e) => {
       e.stopPropagation();
@@ -346,12 +540,12 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
       setOpenCategoryDropdown(null);
     };
 
-    const toggleCategoryStatus = (categoryId, e) => {
-      e.stopPropagation();
-      // Implement category status toggle logic here
-      console.log("Toggle category status:", categoryId);
-      setOpenCategoryDropdown(null);
-    };
+    // const toggleCategoryStatus = (categoryId, e) => {
+    //   e.stopPropagation();
+
+    //   console.log("Toggle category status:", categoryId);
+    //   setOpenCategoryDropdown(null);
+    // };
 
     const handleViewDetails = (productId, e) => {
       e.stopPropagation();
@@ -366,49 +560,67 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
       setShowModal(true);
       setOpenProductDropdown(null);
     };
+const handleEditCategory = async (editedCategory) => {
+  try {
+    setLoading((prev) => ({ ...prev, actions: true }));
 
-    const handleEditCategory = async (editedCategory) => {
-      try {
-        setLoading((prev) => ({ ...prev, actions: true })); // ✅ Already has loading start
+    console.log("Editing category with data:", editedCategory);
 
-        console.log("Editing category with data:", editedCategory._id);
+    // Extract data for the API call
+    const {
+      imageFiles = [],
+      imagesToRemove = [],
+      _id,
+      ...categoryData
+    } = editedCategory;
 
-        // Extract data for the API call
-        const {
-          imageFiles = [],
-          imagesToRemove = [],
-          ...categoryData
-        } = editedCategory;
-
-        // Call the update API
-        const response = await updateCategory(
-          editedCategory._id, // Use the category ID
-          editedCategory // Basic category data
-        );
-
-        // Format the response
-        const formattedCategory = formatCategory(response.data);
-
-        // Update the categories list
-        setCategories((prev) =>
-          prev.map((c) => (c._id === editedCategory._id ? formattedCategory : c))
-        );
-
-        // If we're editing the currently selected category, update it too
-        if (selectedCategory === editedCategory._id) {
-          setSelectedCategory(editedCategory._id); // This will trigger a refresh
-        }
-
-        toast.success("Category updated successfully");
-        setIsEditCategoryModalOpen(false);
-      } catch (error) {
-        console.error("Error updating category:", error);
-        toast.error("Failed to update category");
-      } finally {
-        setLoading((prev) => ({ ...prev, actions: false })); // ✅ Already has loading end
-      }
+    // Prepare the data for API call - include ALL fields
+    const apiData = {
+      name: categoryData.name,
+      description: categoryData.description,
+      availability: categoryData.availability,
+      restaurantId: categoryData.restaurantId,
+      // Convert active to boolean string for FormData
+      active: categoryData.active === 'true' ? 'true' : String(Boolean(categoryData.active)),
+      autoOnOff: categoryData.autoOnOff || 'false',
+      // Include ALL time fields - let backend handle which ones to use
+      availableAfterTime: categoryData.availableAfterTime,
+      availableFromTime: categoryData.availableFromTime,
+      availableToTime: categoryData.availableToTime
     };
 
+    console.log("Sending to API:", apiData);
+
+    // Call the update API with prepared data
+    const response = await updateCategory(
+      _id, // category ID
+      apiData, // category data
+      imagesToRemove, // images to remove
+      imageFiles // new images to upload
+    );
+
+    // Format the response
+    const formattedCategory = formatCategory(response.data);
+
+    // Update the categories list
+    setCategories((prev) =>
+      prev.map((c) => (c._id === _id ? formattedCategory : c))
+    );
+
+    // If we're editing the currently selected category, update it too
+    if (selectedCategory === _id) {
+      setSelectedCategory(_id);
+    }
+
+    toast.success("Category updated successfully");
+    setIsEditCategoryModalOpen(false);
+  } catch (error) {
+    console.error("Error updating category:", error);
+    toast.error("Failed to update category");
+  } finally {
+    setLoading((prev) => ({ ...prev, actions: false }));
+  }
+};
     const handleExport = async () => {
       try {
         setImportStatus("uploading");
@@ -439,16 +651,38 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
       }
     };
 
-    const handleProductDelete = async (productId) => {
-      try {
-        setProducts((prev) => prev.filter((p) => p._id !== productId));
-        await deleteProduct(productId, id);
+  const handleProductDelete = async (productId) => {
+  try {
+    // Validate productId
+    if (!productId) {
+      toast.error("Invalid product ID");
+      return;
+    }
+    
+    setProducts((prev) => prev.filter((p) => p._id !== productId));
+    await deleteProduct(productId);
 
-        toast.success("Product deleted successfully");
-      } catch (error) {
-        console.log(error);
-      }
-    };
+    toast.success("Product deleted successfully");
+    
+    // Reset states
+    setShowModal(false);
+    setDeleteProductId(null);
+    setDeleteMode("");
+    
+    // If the deleted product was selected, clear the selection
+    if (selectedProduct === productId) {
+      setSelectedProduct(null);
+    }
+  } catch (error) {
+    console.log(error);
+    toast.error("Failed to delete product");
+    
+    // Reset states
+    setShowModal(false);
+    setDeleteProductId(null);
+    setDeleteMode("");
+  }
+};
 
     const handleToggleProductActive = async (id) => {
       try {
@@ -471,25 +705,43 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
     };
 
     const HandleDeleteCategory = async (categoryId) => {
-      try {
-        console.log("Deleting category with ID:", categoryId);
-        // Optimistically update UI
-        const originalCategories = [...categories];
-        const originalProducts = [...products];
+  try {
+    console.log("Deleting category with ID:", categoryId);
+    
+    // Validate categoryId
+    if (!categoryId) {
+      toast.error("Invalid category ID");
+      return;
+    }
+    
+    // Optimistically update UI
+    const originalCategories = [...categories];
+    const originalProducts = [...products];
 
-        setCategories((prev) => prev.filter((c) => c._id !== categoryId));
-        setProducts((prev) => prev.filter((p) => p.categoryId !== categoryId));
+    setCategories((prev) => prev.filter((c) => c._id !== categoryId));
+    setProducts((prev) => prev.filter((p) => p.categoryId !== categoryId));
 
-        await deleteCategory(categoryId);
-        toast.success("Category deleted successfully");
-      } catch (error) {
-        console.error("Error deleting category:", error);
-        // Rollback state if API fails
-        setCategories(originalCategories);
-        setProducts(originalProducts);
-        toast.error("Failed to delete category");
-      }
-    };
+    await deleteCategory(categoryId);
+    toast.success("Category deleted successfully");
+    
+    // Reset states
+    setShowModal(false);
+    setDeleteCategoryId(null);
+    setDeleteMode("");
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    // Rollback state if API fails
+    setCategories(originalCategories);
+    setProducts(originalProducts);
+    toast.error("Failed to delete category");
+    
+    // Reset states
+    setShowModal(false);
+    setDeleteCategoryId(null);
+    setDeleteMode("");
+  }
+};
+
     const resetImportModal = () => {
       setIsImportModalOpen(false);
       setUploadedFile(null);
@@ -582,25 +834,28 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
 
 
 
-    const handleArchiveCategory = async (categoryId) => {
-      try {
-        await archiveCategory(categoryId);
-        // Refresh categories or update state
-        fetchCategories(); // or update the specific category in state
-      } catch (error) {
-        console.error('Failed to archive category:', error);
-      }
-    };
-    
-    const handleUnarchiveCategory = async (categoryId) => {
-      try {
-        await unarchiveCategory(categoryId);
-        // Refresh categories or update state
-        fetchCategories(); // or update the specific category in state
-      } catch (error) {
-        console.error('Failed to unarchive category:', error);
-      }
-    };
+ 
+const handleArchiveCategory = async (categoryId) => {
+  try {   toast.success('Category archived successfully! 📁');
+    await archiveCategory(categoryId);
+    await fetchCategories();
+ 
+  } catch (error) {
+    console.error('Failed to archive category:', error);
+    toast.error('Failed to archive category');
+  }
+};
+  const handleUnarchiveCategory = async (categoryId) => {
+  try {
+    await unarchiveCategory(categoryId);
+    await fetchCategories();
+    toast.success('Category unarchived successfully! 🔄');
+  } catch (error) {
+    console.error('Failed to unarchive category:', error);
+    toast.error('Failed to restore category');
+  }
+};
+
 
     
 
@@ -784,7 +1039,7 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
           )}
         </div>
 
-        <DeleteConfirmationModal
+        {/* <DeleteConfirmationModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
           onConfirm={() => {
@@ -793,19 +1048,34 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
           title="Delete Product"
           itemName="Onion Rings"
           message="This product will be permanently removed from your menu and cannot be recovered."
-        />
+        /> */}
 
-        <DeleteConfirmationModal
-          isOpen={showProdutDeleteModal}
-          onClose={() => setShowProductDeleteModal(false)}
-          onConfirm={() => {
-            handleProductDelete(deleteProductId);
-          }}
-          title="Delete Product"
-          itemName="Onion Rings"
-          message="This product will be permanently removed from your menu and cannot be recovered."
-        />
-
+      <DeleteConfirmationModal
+  isOpen={showModal}
+  onClose={() => {
+    setShowModal(false);
+    setDeleteCategoryId(null);
+    setDeleteProductId(null);
+  }}
+  onConfirm={() => {
+    if (deleteMode === "category" && deleteCategoryId) {
+      HandleDeleteCategory(deleteCategoryId);
+    } else if (deleteMode === "product" && deleteProductId) {
+      handleProductDelete(deleteProductId);
+    }
+  }}
+  title={deleteMode === "category" ? "Delete Category" : "Delete Product"}
+  itemName={
+    deleteMode === "category" 
+      ? categories.find(cat => cat._id === deleteCategoryId)?.name || "this category"
+      : products.find(prod => prod._id === deleteProductId)?.name || "this product"
+  }
+  message={
+    deleteMode === "category" 
+      ? "This category and all its products will be permanently removed from your menu and cannot be recovered."
+      : "This product will be permanently removed from your menu and cannot be recovered."
+  }
+/>
         {/* <div className="w-full mx-auto p-4 sm:p-6">
           {restaurant && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
@@ -861,7 +1131,12 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
             <div className="p-6">
 
 
-
+  <div className="flex items-center gap-2 mb-4">
+        <Store className="h-5 w-5 text-blue-600" />
+        <h2 className="text-lg font-semibold text-gray-800">
+          {restaurant?.name || "Restaurant"} - Catalog Management
+        </h2>
+      </div>
                 <div className="border-b border-gray-200">
                       <div className="container mx-auto px-4">
                         <ul className="flex space-x-8">
@@ -1162,28 +1437,14 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
 {/* Category Dropdown - FIXED */}
 {categoryDropdown && (
   <div
-    className="absolute z-[9999] bg-white rounded-md shadow-lg border border-gray-200 w-48"
+    className="absolute z-[9999] bg-white rounded-md shadow-lg border border-gray-200 w-56"
     style={{
       top: `${dropdownPosition.top}px`,
       left: `${dropdownPosition.left}px`,
     }}
     onClick={(e) => e.stopPropagation()}
   >
-    <button
-      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-      onClick={(e) => {
-        e.stopPropagation();
-        const category = categories.find(c => c._id === categoryDropdown);
-        setEditingCategory(category);
-        setIsEditCategoryModalOpen(true);
-        setCategoryDropdown(null);
-      }}
-    >
-      <Edit3 size={14} />
-      Edit Category
-    </button>
-
-    {/* Archive/Unarchive Option */}
+    {/* Archive/Unarchive Option - FIRST */}
     {categories.find(c => c._id === categoryDropdown)?.archived ? (
       <button
         className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-gray-100 flex items-center gap-2"
@@ -1210,22 +1471,84 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
       </button>
     )}
 
+    {/* Add Product Option - SECOND */}
     <button
-      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
+      className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-gray-100 flex items-center gap-2"
       onClick={(e) => {
         e.stopPropagation();
-        setDeleteCategoryId(categoryDropdown);
-        setDeleteMode("category");
-        setShowModal(true);
+        // Set the selected category and open product modal
+        setSelectedCategory(categoryDropdown);
+        setIsProductModalOpen(true);
         setCategoryDropdown(null);
       }}
     >
+      <Plus size={14} />
+      Add Product
+    </button>
+
+    {/* Disable/Enable Category Option - THIRD */}
+    {categories.find(c => c._id === categoryDropdown)?.active ? (
+      <button
+        className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-gray-100 flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          // You'll need to implement handleDisableCategory function
+          handleDisableCategory(categoryDropdown);
+          setCategoryDropdown(null);
+        }}
+      >
+        <EyeOff size={14} />
+        Disable Category
+      </button>
+    ) : (
+      <button
+        className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-gray-100 flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          // You'll need to implement handleEnableCategory function
+          handleEnableCategory(categoryDropdown);
+          setCategoryDropdown(null);
+        }}
+      >
+        <Eye size={14} />
+        Enable Category
+      </button>
+    )}
+
+    {/* Edit Category Option - FOURTH */}
+    <button
+      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+      onClick={(e) => {
+        e.stopPropagation();
+        const category = categories.find(c => c._id === categoryDropdown);
+        setEditingCategory(category);
+        setIsEditCategoryModalOpen(true);
+        setCategoryDropdown(null);
+      }}
+    >
+      <Edit3 size={14} />
+      Edit Category
+    </button>
+
+    {/* Delete Category Option - FIFTH */}
+   <button
+  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
+  onClick={(e) => {
+    e.stopPropagation();
+    setDeleteCategoryId(categoryDropdown); // FIXED: Proper function call
+    setDeleteMode("category");
+    setShowModal(true);
+    setCategoryDropdown(null);
+  }}
+>
       <Trash2 size={14} />
       Delete Category
     </button>
   </div>
 )}
 </div>
+
+{console.log("category dletet i d",deleteCategoryId)}
 
                 <ImportCategoriesModal
                   isOpen={isImportModalOpen}
@@ -1359,79 +1682,111 @@ const [productDropdownPosition, setProductDropdownPosition] = useState({ top: 0,
   </div>
 
   {/* Product Dropdown - FIXED */}
-  {productDropdown && (
-    <div
-      className="fixed z-[9999] bg-white rounded-md shadow-lg border border-gray-200 w-48"
-      style={{
-        top: `${dropdownPosition.top}px`,
-        left: `${dropdownPosition.left}px`,
+{productDropdown && (
+  <div
+    className="fixed z-[9999] bg-white rounded-md shadow-lg border border-gray-200 w-48"
+    style={{
+      top: `${dropdownPosition.top}px`,
+      left: `${dropdownPosition.left}px`,
+    }}
+    onClick={(e) => e.stopPropagation()}
+  >
+    {/* Archive/Unarchive Option - FIRST */}
+    {products.find(p => p._id === productDropdown)?.archived ? (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleUnarchiveProduct(productDropdown);
+          setProductDropdown(null);
+        }}
+        className="flex items-center w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
+      >
+        <Archive size={14} className="mr-2" />
+        Unarchive Product
+      </button>
+    ) : (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleArchiveProduct(productDropdown);
+          setProductDropdown(null);
+        }}
+        className="flex items-center w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-gray-100"
+      >
+        <Archive size={14} className="mr-2" />
+        Archive Product
+      </button>
+    )}
+
+    {/* Edit Product Option - SECOND */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        const product = products.find(p => p._id === productDropdown);
+        setEditingProduct(product);
+        setIsEditProductModalOpen(true);
+        setProductDropdown(null);
       }}
-      onClick={(e) => e.stopPropagation()}
+      className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
     >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          const product = products.find(p => p._id === productDropdown);
-          setEditingProduct(product);
-          setIsEditProductModalOpen(true);
-          setProductDropdown(null);
-        }}
-        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-      >
-        <Edit3 size={14} className="mr-2" />
-        Edit Product
-      </button>
+      <Edit3 size={14} className="mr-2" />
+      Edit Product
+    </button>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleToggleProductActive(productDropdown);
-          setProductDropdown(null);
-        }}
-        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-      >
-        {products.find(p => p._id === productDropdown)?.active ? (
-          <>
-            <ToggleRight size={14} className="mr-2 text-green-600" />
-            Set Unavailable
-          </>
-        ) : (
-          <>
-            <ToggleRight size={14} className="mr-2 text-red-600" />
-            Set Available
-          </>
-        )}
-      </button>
+    {/* Toggle Availability Option - THIRD */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleToggleProductActive(productDropdown);
+        setProductDropdown(null);
+      }}
+      className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+    >
+      {products.find(p => p._id === productDropdown)?.active ? (
+        <>
+          <ToggleRight size={14} className="mr-2 text-green-600" />
+          Set Unavailable
+        </>
+      ) : (
+        <>
+          <ToggleRight size={14} className="mr-2 text-red-600" />
+          Set Available
+        </>
+      )}
+    </button>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedProduct(productDropdown);
-          setProductDropdown(null);
-        }}
-        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-      >
-        <Eye size={14} className="mr-2" />
-        View Details
-      </button>
+    {/* View Details Option - FOURTH */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setSelectedProduct(productDropdown);
+        setProductDropdown(null);
+      }}
+      className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+    >
+      <Eye size={14} className="mr-2" />
+      View Details
+    </button>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setDeleteProductId(productDropdown);
-          setDeleteMode("product");
-          setShowModal(true);
-          setProductDropdown(null);
-        }}
-        className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-      >
-        <Trash2 size={14} className="mr-2" />
-        Delete
-      </button>
-    </div>
-  )}
+    {/* Delete Option - FIFTH */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setDeleteProductId(productDropdown);
+        setDeleteMode("product");
+        setShowModal(true);
+        setProductDropdown(null);
+      }}
+      className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+    >
+      <Trash2 size={14} className="mr-2" />
+      Delete
+    </button>
+  </div>
+)}
 </div>
 
+   
                 {/* Product Details Column */}
                 <div className="xl:col-span-6">
                   <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl p-5 h-full border border-gray-200">

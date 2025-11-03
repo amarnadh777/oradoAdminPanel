@@ -1,24 +1,17 @@
 import React from 'react'
 import { useState } from "react";
-/*************  ✨ Windsurf Command ⭐  *************/
-/**
- * A modal that appears when a user wants to delete their account. The modal should
- * explain the consequences of deleting the account and prompt the user to confirm
- * they want to delete their account.
- *
- * @returns {React.ReactElement} The modal component.
- */
-/*******  cf3b28d3-f413-4538-88c4-dfea31aeac75  *******/import { X, Trash2, AlertTriangle, Shield } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 
 function DeleteConfirmationModal({ 
- isOpen, 
+  isOpen, 
   onClose, 
   onConfirm, 
   title = "Delete Item", 
   message = "Are you sure you want to delete this item? This action cannot be undone.",
-  itemName = "" }) {
+  itemName = "" 
+}) {
     
- const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleConfirm = async () => {
     setIsDeleting(true);
@@ -40,12 +33,11 @@ function DeleteConfirmationModal({
 
   if (!isOpen) return null;
 
-
   return (
     <div className="fixed inset-0 z-50 overflow-auto flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop - FIXED: Changed bgOp to bg-opacity */}
       <div 
-        className="fixed inset-0 bg-black bgOp" 
+        className="fixed inset-0 bg-black bg-opacity-50" 
         onClick={handleClose}
       ></div>
       
@@ -112,12 +104,6 @@ function DeleteConfirmationModal({
       </div>
     </div>
   );
-
-
-
-
-
 };
 
-
-export default DeleteConfirmationModal
+export default DeleteConfirmationModal;
